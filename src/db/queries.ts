@@ -114,12 +114,23 @@ export async function listCategories(): Promise<CategoryRow[]> {
   )) as CategoryRow[];
 }
 
+export const MAX_CATEGORIES = 10;
+
 export async function addCategory(
   id: string,
   name: string,
   type: string
 ) {
   const db = await getDb();
+
+  const countRow =
+    ((await db.getFirstAsync(
+      `SELECT COUNT(*) as total FROM categories;`
+    )) as { total?: number | null }) ?? {};
+
+  if ((countRow.total ?? 0) >= MAX_CATEGORIES) {
+    throw new Error(`En fazla ${MAX_CATEGORIES} kategori eklenebilir.`);
+  }
 
   await db.runAsync(
     `INSERT INTO categories (id, name, type)

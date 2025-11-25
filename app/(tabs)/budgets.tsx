@@ -6,27 +6,19 @@ import CategoryPicker from "../../src/components/CategoryPicker";
 import ProgressRing from "../../src/components/ProgressRing";
 
 import {
+  type CategoryRow,
   listBudgets,
   listCategories,
   monthSpentByCategory,
   setBudget,
+  type BudgetRow,
 } from "../../src/db/queries";
-
-// -----------------------
-// TYPES
-// -----------------------
-type BudgetRow = {
-  id: string;
-  category_id: string;
-  month: string;
-  limit_amount: number;
-};
 
 export default function BudgetsScreen() {
   const [month, setMonth] = useState("2025-11");
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [budgets, setBudgets] = useState<BudgetRow[]>([]);
-  const [pickedCat, setPickedCat] = useState<any | null>(null);
+  const [pickedCat, setPickedCat] = useState<CategoryRow | null>(null);
   const [modal, setModal] = useState(false);
   const [limit, setLimit] = useState("");
 
@@ -109,7 +101,7 @@ export default function BudgetsScreen() {
 
           return (
             <View
-              key={b.id}
+              key={b.id ?? `${b.month}-${b.category_id}`}
               style={{
                 marginTop: 10,
                 padding: 12,
