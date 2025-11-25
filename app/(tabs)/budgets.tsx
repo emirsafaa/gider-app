@@ -10,17 +10,8 @@ import {
   listCategories,
   monthSpentByCategory,
   setBudget,
+  type BudgetRow,
 } from "../../src/db/queries";
-
-// -----------------------
-// TYPES
-// -----------------------
-type BudgetRow = {
-  id: string;
-  category_id: string;
-  month: string;
-  limit_amount: number;
-};
 
 export default function BudgetsScreen() {
   const [month, setMonth] = useState("2025-11");
@@ -109,7 +100,7 @@ export default function BudgetsScreen() {
 
           return (
             <View
-              key={b.id}
+              key={b.id ?? `${b.month}-${b.category_id}`}
               style={{
                 marginTop: 10,
                 padding: 12,
