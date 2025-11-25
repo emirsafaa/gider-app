@@ -106,6 +106,15 @@ async function runAsync(sql: string, params: any[] = []) {
       updated_at,
     });
   }
+
+  if (sql.startsWith("INSERT INTO categories")) {
+    const [id, name, type] = params;
+
+    const exists = categories.some((c) => c.id === id || c.name === name);
+    if (!exists) {
+      categories.push({ id, name, type, icon: "" });
+    }
+  }
 }
 
 async function getAllAsync(sql: string, params: any[] = []): Promise<any[]> {
@@ -137,6 +146,10 @@ async function getFirstAsync<T extends { total: number }>(
   sql: string,
   params: any[] = []
 ): Promise<T | null> {
+  if (sql.includes("COUNT(*)")) {
+    return { total: categories.length } as T;
+  }
+
   if (sql.includes("SUM") && params[0]) {
     const month = params[0];
 
