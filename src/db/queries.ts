@@ -80,17 +80,22 @@ export async function addTransaction(input: TransactionRow) {
 // MONTH SUMMARY
 // -------------------------------------------
 export async function monthSummary(month: string) {
-  const rows = await listTransactions(month);
+  const db = await getDb();
 
-  let income = 0;
-  let expense = 0;
+  const row = await db.getFirstAsync<{
+    income: number | null;
+    expense: number | null;
+  }>(
+    `SELECT 
+        COALESCE(SUM(CASE WHEN amount > 0 THEN amount END), 0) as income,
+        COALESCE(SUM(CASE WHEN amount < 0 THEN ABS(amount) END), 0) as expense
+      FROM transactions
+      WHERE strftime('%Y-%m', tx_date)=?;`,
+    [month]
+  );
 
-  for (const r of rows) {
-    const amount = Number(r.amount) || 0;
-
-    if (amount > 0) income += amount;
-    else if (amount < 0) expense += Math.abs(amount);
-  }
+  const income = Number(row?.income ?? 0);
+  const expense = Number(row?.expense ?? 0);
 
   return {
     income,
@@ -174,15 +179,14 @@ export async function monthSpentByCategory(
   month: string,
   category_id: string
 ) {
-  const rows = await listTransactions(month);
+  const db = await getDb();
 
-  let total = 0;
+  const row = await db.getFirstAsync<{ total: number | null }>(
+    `SELECT COALESCE(SUM(ABS(amount)), 0) as total
+     FROM transactions
+     WHERE category_id = ? AND amount < 0 AND strftime('%Y-%m', tx_date)=?;`,
+    [category_id, month]
+  );
 
-  for (const t of rows) {
-    if (t.category_id === category_id && t.amount < 0) {
-      total += Math.abs(t.amount);
-    }
-  }
-
-  return total;
+  return Number(row?.total ?? 0);
 }
