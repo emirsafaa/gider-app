@@ -6,6 +6,7 @@ import CategoryPicker from "../../src/components/CategoryPicker";
 import ProgressRing from "../../src/components/ProgressRing";
 
 import {
+  type CategoryRow,
   listBudgets,
   listCategories,
   monthSpentByCategory,
@@ -15,9 +16,9 @@ import {
 
 export default function BudgetsScreen() {
   const [month, setMonth] = useState("2025-11");
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [budgets, setBudgets] = useState<BudgetRow[]>([]);
-  const [pickedCat, setPickedCat] = useState<any | null>(null);
+  const [pickedCat, setPickedCat] = useState<CategoryRow | null>(null);
   const [modal, setModal] = useState(false);
   const [limit, setLimit] = useState("");
 

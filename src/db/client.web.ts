@@ -8,11 +8,11 @@ export type CategoryRow = {
   id: string;
   name: string;
   type: "expense" | "income";
-  icon: string; // null olmayacak
+  icon?: string | null;
 };
 
 export type BudgetRow = {
-  id: string;
+  id?: string;
   month: string;
   category_id: string;
   limit_amount: number;

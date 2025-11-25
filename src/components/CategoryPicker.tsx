@@ -8,16 +8,21 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { addCategory, listCategories, MAX_CATEGORIES } from "../db/queries";
+import {
+  addCategory,
+  listCategories,
+  MAX_CATEGORIES,
+  type CategoryRow,
+} from "../db/queries";
 
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onSelect: (cat: any) => void;
+  onSelect: (cat: CategoryRow) => void;
 };
 
 export default function CategoryPicker({ visible, onClose, onSelect }: Props) {
-  const [cats, setCats] = useState<any[]>([]);
+  const [cats, setCats] = useState<CategoryRow[]>([]);
   const [newName, setNewName] = useState("");
   const [type, setType] = useState<"expense" | "income">("expense");
 
