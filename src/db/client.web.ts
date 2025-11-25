@@ -100,6 +100,33 @@ async function runAsync(sql: string, params: any[] = []) {
     });
   }
 
+  if (sql.startsWith("INSERT INTO categories")) {
+    const [id, name, type] = params;
+    categories.push({ id, name, type, icon: null });
+  }
+
+  if (sql.startsWith("DELETE FROM categories")) {
+    const [id] = params;
+    await deleteCategory(id);
+  }
+
+  if (sql.startsWith("INSERT INTO budgets")) {
+    const [month, category_id, limit_amount] = params;
+    const existing = budgets.find((b) => b.month === month && b.category_id === category_id);
+
+    if (existing) {
+      existing.limit_amount = limit_amount;
+      return;
+    }
+
+    budgets.push({
+      id: "b-" + Math.random().toString(36).slice(2, 10),
+      month,
+      category_id,
+      limit_amount,
+    });
+  }
+
   if (sql.startsWith("INSERT INTO _migrations")) {
     // ignore on web
     return;
@@ -110,9 +137,14 @@ async function getAllAsync(sql: string, params: any[] = []): Promise<any[]> {
   await ensureInitialized();
 
   if (sql.includes("FROM transactions")) {
-    const filtered = sql.includes("strftime('%Y-%m', t.tx_date)=?")
+    const filtered = (sql.includes("strftime('%Y-%m', t.tx_date)=?")
       ? transactions.filter((t) => t.tx_date.startsWith(params[0]))
-      : transactions;
+      : transactions
+    ).sort((a, b) => {
+      const dateDiff = b.tx_date.localeCompare(a.tx_date);
+      if (dateDiff !== 0) return dateDiff;
+      return b.created_at.localeCompare(a.created_at);
+    });
 
     return refreshCategoryNames(filtered);
   }
@@ -123,6 +155,10 @@ async function getAllAsync(sql: string, params: any[] = []): Promise<any[]> {
       return budgets.filter((b) => b.month === month);
     }
     return budgets;
+  }
+
+  if (sql.includes("FROM categories")) {
+    return [...categories].sort((a, b) => a.name.localeCompare(b.name));
   }
 
   if (sql.includes("FROM _migrations")) {
