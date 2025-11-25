@@ -12,15 +12,24 @@ import {
   setBudget,
 } from "../../src/db/queries";
 
+// -----------------------
+// TYPES
+// -----------------------
+type BudgetRow = {
+  id: string;
+  category_id: string;
+  month: string;
+  limit_amount: number;
+};
+
 export default function BudgetsScreen() {
   const [month, setMonth] = useState("2025-11");
   const [categories, setCategories] = useState<any[]>([]);
-  const [budgets, setBudgets] = useState<any[]>([]);
+  const [budgets, setBudgets] = useState<BudgetRow[]>([]);
   const [pickedCat, setPickedCat] = useState<any | null>(null);
   const [modal, setModal] = useState(false);
   const [limit, setLimit] = useState("");
 
-  // Harcamalar: { "cat-market": 164000, ... }
   const [spentMap, setSpentMap] = useState<{ [key: string]: number }>({});
 
   async function load() {
@@ -30,7 +39,6 @@ export default function BudgetsScreen() {
     setCategories(cats);
     setBudgets(b);
 
-    // her kategori için o ayki harcama hesapla
     const temp: any = {};
     for (const item of b) {
       temp[item.category_id] = await monthSpentByCategory(month, item.category_id);
@@ -38,12 +46,10 @@ export default function BudgetsScreen() {
     setSpentMap(temp);
   }
 
-  // ekran ilk açıldığında
   useEffect(() => {
     load();
   }, []);
 
-  // TAB'a her girildiğinde yeniden yükle
   useFocusEffect(
     useCallback(() => {
       load();
@@ -90,7 +96,6 @@ export default function BudgetsScreen() {
         onSelect={(c) => setPickedCat(c)}
       />
 
-      {/* --- LİSTE --- */}
       <View style={{ marginTop: 30 }}>
         <Text style={{ fontSize: 18, fontWeight: "700" }}>Bu Ayki Limitler</Text>
 
