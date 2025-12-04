@@ -4,6 +4,7 @@ import { Button, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 import CategoryPicker from "../../src/components/CategoryPicker";
 import ProgressRing from "../../src/components/ProgressRing";
+import { thisMonth } from "../../src/utils/date";
 
 import {
   listBudgets,
@@ -13,7 +14,7 @@ import {
 } from "../../src/db/queries";
 
 export default function BudgetsScreen() {
-  const [month, setMonth] = useState("2025-11");
+  const [month, setMonth] = useState(thisMonth());
   const [categories, setCategories] = useState<any[]>([]);
   const [budgets, setBudgets] = useState<any[]>([]);
   const [pickedCat, setPickedCat] = useState<any | null>(null);
@@ -41,7 +42,7 @@ export default function BudgetsScreen() {
   // ekran ilk açıldığında
   useEffect(() => {
     load();
-  }, []);
+  }, [month]);
 
   // TAB'a her girildiğinde yeniden yükle
   useFocusEffect(

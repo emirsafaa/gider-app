@@ -18,9 +18,9 @@ CREATE TABLE IF NOT EXISTS transactions (
   id TEXT PRIMARY KEY,
   account_id TEXT NOT NULL,
   category_id TEXT,
-  amount INTEGER NOT NULL,           -- kuruş: - gider, + gelir
+  amount INTEGER NOT NULL,
   note TEXT,
-  tx_date TEXT NOT NULL,             -- YYYY-MM-DD
+  tx_date TEXT NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   FOREIGN KEY(account_id) REFERENCES accounts(id),
@@ -29,11 +29,10 @@ CREATE TABLE IF NOT EXISTS transactions (
 
 CREATE TABLE IF NOT EXISTS budgets (
   id TEXT PRIMARY KEY,
+  month TEXT NOT NULL,                  -- YYYY-MM
   category_id TEXT NOT NULL,
-  month TEXT NOT NULL,               -- YYYY-MM
   limit_amount INTEGER NOT NULL,
   FOREIGN KEY(category_id) REFERENCES categories(id),
   UNIQUE(month, category_id)
 );
-
 `;

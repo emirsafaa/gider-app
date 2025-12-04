@@ -4,47 +4,31 @@ Kişisel harcamaları takip eden, kategorilere ayıran ve aylık bütçe kontrol
 React Native + Expo + SQLite ile geliştirilmiştir. Offline-first, hafif ve hızlıdır.
 
 🚀 Özellikler
-
-Harcama / gelir ekleme
-
-Kategorilere ayırma
-
-Aylık bazda toplam gider görüntüleme
-
-SQLite üzerinde offline depolama
-
-Sekmeli navigasyon (Özet, İşlemler, Bütçe, Ayarlar)
-
-Basit, temiz UI
-
-TypeScript destekli mimari
+- Harcama / gelir ekleme
+- Kategorilere ayırma
+- Aylık bazda toplam gider görüntüleme
+- SQLite üzerinde offline depolama
+- Sekmeli navigasyon (Özet, İşlemler, Bütçe, Ayarlar)
+- Basit, temiz UI
+- TypeScript destekli mimari
 
 Yakında:
-
-Bütçe limitleri (%80 / %100 uyarı)
-
-Kategori grafikleri
-
-CSV içe/dışa aktarma
-
-Supabase ile bulut senkronizasyonu
+- Bütçe limitleri (%80 / %100 uyarı)
+- Kategori grafikleri
+- CSV içe/dışa aktarma
+- Supabase ile bulut senkronizasyonu
 
 🛠️ Kullanılan Teknolojiler
+- React Native / Expo
+- Expo Router
+- SQLite (expo-sqlite)
+- Zustand (lightweight state)
+- Dayjs, Dinero.js
+- Victory Native (grafikler)
+- TypeScript
 
-React Native / Expo
-
-Expo Router
-
-SQLite (expo-sqlite)
-
-Zustand (lightweight state)
-
-Dayjs, Dinero.js
-
-Victory Native (grafikler)
-
-TypeScript
 📁 Proje Yapısı
+```
 gider-app/
   app/
     _layout.tsx
@@ -56,54 +40,40 @@ gider-app/
       budgets.tsx
       settings.tsx
   src/
+    components/
+      CategoryPicker.tsx
+      ProgressRing.tsx
+      TransactionForm.tsx
     db/
-      schema.sql
-      client.ts
-      queries.ts
-    state/
-      useStore.ts
+      client.native.ts   // Expo SQLite kurulum ve migration/seed
+      client.web.ts      // Web için in-memory stub
+      queries.ts         // Veri erişim katmanı
+      schema.ts          // Migration listesi
     utils/
       date.ts
       money.ts
-    components/
-      TransactionForm.tsx
   assets/
   package.json
   README.md
-  Kurulum
+```
 
-Projeyi klonladıktan sonra:
+🗄️ Veritabanı
+- Şema ve indeksler `src/db/schema.ts` içindeki migration listesinde tutulur.
+- `client.native.ts` uygulama açılışında migration'ları idempotent şekilde uygular, seed için varsayılan hesap/kategorileri ekler.
+- Tutarlar kuruş olarak integer tutulur (ör: 120,50 TL → 12050).
+- Foreign key kuralları: işlem silinen hesabı takip eden kayıtları temizler (`ON DELETE CASCADE`), kategori silindiğinde işlem satırındaki kategori null olur (`ON DELETE SET NULL`), bütçe kayıtları ilgili kategori silinince temizlenir.
+
+Kurulum
+```
 npm install
 npx expo start
-
-Veritabanı ...
-SQLite schema (schema.sql):
-
-accounts
-
-categories
-
-transactions
-
-budgets
-
-Tutarlar kuruş olarak integer tutulur (ör: 120,50 TL → 12050).
+```
 
 🎯 Yol Haritası
-
- Proje iskeleti
-
- Tab navigasyon
-
- İşlem ekleme ekranı
-
- Bütçe modülü
-
- Grafik ekranı
-
- CSV import/export
-
- Supabase senkronizasyonu
-
-
-
+- Proje iskeleti ✅
+- Tab navigasyon ✅
+- İşlem ekleme ekranı ✅
+- Bütçe modülü ✅ (aylık limit ve harcama takibi)
+- Grafik ekranı
+- CSV import/export
+- Supabase senkronizasyonu

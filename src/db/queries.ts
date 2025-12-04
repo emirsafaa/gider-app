@@ -54,22 +54,11 @@ export async function addTransaction(input: NewTransactionInput) {
   );
 }
 
-// ÖNCEKİ API'yi bozmayalım: sadece gider (pozitif) döner
-export async function monthExpenseTotal(month: string) {
-  const summary = await monthSummary(month);
-  return summary.expense;
-}
-
-// --- YENİ KISIM: gelir / gider / net ---
-
-export type MonthSummary = {
-  income: number;  // toplam gelir (kuruş, +)
-  expense: number; // toplam gider (kuruş, +)
-  net: number;     // income - expense (kuruş, + veya -)
-};
-
-export async function monthSummary(month: string): Promise<MonthSummary> {
-  const rows: any[] = await listTransactions(month);
+// -------------------------------------------
+// MONTH SUMMARY
+// -------------------------------------------
+export async function monthSummary(month: string) {
+  const rows = await listTransactions(month);
 
   let income = 0;
   let expense = 0;
@@ -77,18 +66,20 @@ export async function monthSummary(month: string): Promise<MonthSummary> {
   for (const r of rows) {
     const amount = Number(r.amount) || 0;
 
-    if (amount > 0) {
-      // gelir
-      income += amount;
-    } else if (amount < 0) {
-      // giderler veritabanında negatif tutuluyor
-      expense += Math.abs(amount);
-    }
+    if (amount > 0) income += amount;
+    else if (amount < 0) expense += Math.abs(amount);
   }
 
-  const net = income - expense;
+  return {
+    income,
+    expense,
+    net: income - expense,
+  };
+}
 
-  return { income, expense, net };
+export async function monthExpenseTotal(month: string) {
+  const s = await monthSummary(month);
+  return s.expense;
 }
 // --- CATEGORY QUERIES ---
 
@@ -165,18 +156,23 @@ export async function setBudget(month: string, category_id: string, limit_amount
     [month, category_id, limit_amount]
   );
 }
-// --- MONTHLY SPENT PER CATEGORY ---
-export async function monthSpentByCategory(month: string, category_id: string) {
-  const all = await listTransactions(month);
+
+// -------------------------------------------
+// MONTHLY SPENT BY CATEGORY
+// -------------------------------------------
+export async function monthSpentByCategory(
+  month: string,
+  category_id: string
+) {
+  const rows = await listTransactions(month);
 
   let total = 0;
 
-  for (const tx of all) {
-    // sadece giderler (amount < 0)
-    if (tx.category_id === category_id && tx.amount < 0) {
-      total += Math.abs(tx.amount);
+  for (const t of rows) {
+    if (t.category_id === category_id && t.amount < 0) {
+      total += Math.abs(t.amount);
     }
   }
 
-  return total; // kuruş cinsinden
+  return total;
 }
