@@ -7,10 +7,12 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
+// 👇 Abonelikleri işleyen fonksiyonu içe aktarıyoruz
+import { processRecurringTransactions } from '../src/db/queries';
 
 export {
   // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
+  ErrorBoundary
 } from 'expo-router';
 
 export const unstable_settings = {
@@ -35,6 +37,9 @@ export default function RootLayout() {
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
+      
+      // 👇 Uygulama yüklendiğinde günü gelen tekrarlayan işlemleri (abonelikleri) kontrol et ve işle
+      processRecurringTransactions().catch(e => console.error("Otomatik işlem hatası:", e));
     }
   }, [loaded]);
 

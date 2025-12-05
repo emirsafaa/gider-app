@@ -35,4 +35,16 @@ CREATE TABLE IF NOT EXISTS budgets (
   FOREIGN KEY(category_id) REFERENCES categories(id),
   UNIQUE(month, category_id)
 );
+
+CREATE TABLE IF NOT EXISTS recurring_transactions (
+  id TEXT PRIMARY KEY,
+  amount INTEGER NOT NULL,
+  category_id TEXT,
+  account_id TEXT NOT NULL,
+  note TEXT,
+  frequency TEXT NOT NULL DEFAULT 'monthly', -- Şimdilik sadece 'monthly' destekleyelim
+  next_due_date TEXT NOT NULL,               -- YYYY-MM-DD
+  FOREIGN KEY(account_id) REFERENCES accounts(id),
+  FOREIGN KEY(category_id) REFERENCES categories(id)
+);
 `;

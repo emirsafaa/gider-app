@@ -1,44 +1,85 @@
-// src/db/queries.ts
 import { getDb } from "./client";
 
-export async function listTransactions(month?: string) {
-  const db = await getDb();
+// -------------------------------------------
+// TYPES
+// -------------------------------------------
+export type MonthSummary = {
+  income: number;
+  expense: number;
+  net: number;
+};
 
-  if (month) {
-    return db.getAllAsync(
-      `SELECT t.*, c.name as category_name 
-       FROM transactions t
-       LEFT JOIN categories c ON c.id = t.category_id
-       WHERE strftime('%Y-%m', t.tx_date)=?
-       ORDER BY t.tx_date DESC, t.created_at DESC;`,
-      [month]
-    );
-  }
-
-  return db.getAllAsync(
-    `SELECT t.*, c.name as category_name 
-     FROM transactions t
-     LEFT JOIN categories c ON c.id = t.category_id
-     ORDER BY t.tx_date DESC, t.created_at DESC;`
-  );
-}
-
-export type NewTransactionInput = {
+export type TransactionRow = {
   id: string;
   account_id: string;
-  category_id?: string;
+  category_id?: string | null;
   amount: number;
   note?: string | null;
   tx_date: string;
   created_at: string;
   updated_at: string;
+  category_name?: string | null;
 };
 
-export async function addTransaction(input: NewTransactionInput) {
+export type CategoryRow = {
+  id: string;
+  name: string;
+  type: string;
+  icon?: string | null;
+};
+
+export type BudgetRow = {
+  id?: string;
+  month: string;
+  category_id: string;
+  limit_amount: number;
+};
+
+// -------------------------------------------
+// TRANSACTIONS
+// -------------------------------------------
+export async function listTransactions(
+  month?: string,
+  keyword?: string
+): Promise<TransactionRow[]> {
+  const db = await getDb();
+
+  let query = `
+    SELECT t.*, c.name as category_name
+    FROM transactions t
+    LEFT JOIN categories c ON c.id = t.category_id
+  `;
+  
+  const params: any[] = [];
+  const conditions: string[] = [];
+
+  // Ay filtresi (varsa)
+  if (month) {
+    conditions.push("strftime('%Y-%m', t.tx_date) = ?");
+    params.push(month);
+  }
+
+  // Kelime arama (varsa) - Not veya Kategori isminde arar
+  if (keyword) {
+    conditions.push("(t.note LIKE ? OR c.name LIKE ?)");
+    params.push(`%${keyword}%`, `%${keyword}%`);
+  }
+
+  if (conditions.length > 0) {
+    query += " WHERE " + conditions.join(" AND ");
+  }
+
+  query += " ORDER BY t.tx_date DESC, t.created_at DESC;";
+
+  // Gelen veriyi TransactionRow[] olarak tipleyelim
+  return (await db.getAllAsync(query, params)) as TransactionRow[];
+}
+
+export async function addTransaction(input: TransactionRow) {
   const db = await getDb();
 
   await db.runAsync(
-    `INSERT INTO transactions 
+    `INSERT INTO transactions
       (id, account_id, category_id, amount, note, tx_date, created_at, updated_at)
      VALUES (?,?,?,?,?,?,?,?);`,
     [
@@ -54,11 +95,17 @@ export async function addTransaction(input: NewTransactionInput) {
   );
 }
 
+export async function deleteTransaction(id: string) {
+  const db = await getDb();
+  await db.runAsync("DELETE FROM transactions WHERE id = ?", [id]);
+}
+
 // -------------------------------------------
 // MONTH SUMMARY
 // -------------------------------------------
-export async function monthSummary(month: string) {
-  const rows = await listTransactions(month);
+export async function monthSummary(month: string): Promise<MonthSummary> {
+  // Sadece ayı filtreleyerek çağırıyoruz (keyword yok)
+  const rows: TransactionRow[] = await listTransactions(month);
 
   let income = 0;
   let expense = 0;
@@ -81,33 +128,27 @@ export async function monthExpenseTotal(month: string) {
   const s = await monthSummary(month);
   return s.expense;
 }
-// --- CATEGORY QUERIES ---
 
-export async function listCategories() {
+// -------------------------------------------
+// CATEGORIES
+// -------------------------------------------
+export async function listCategories(): Promise<CategoryRow[]> {
   const db = await getDb();
-
-  // WEB: client.web.ts içindeki categories dizisini döndürür
-  if (db.listCategories) {
-    return db.listCategories();
-  }
-
-  // NATIVE: sqlite sorgusu
-  return db.getAllAsync(
+  return (await db.getAllAsync(
     `SELECT * FROM categories ORDER BY name ASC;`
-  );
+  )) as CategoryRow[];
 }
 
-export async function addCategory(id: string, name: string, type: "expense" | "income") {
+export async function addCategory(
+  id: string,
+  name: string,
+  type: string
+) {
   const db = await getDb();
 
-  // WEB: addCategory fonksiyonu varsa onu kullan
-  if (db.addCategory) {
-    return db.addCategory(id, name, type);
-  }
-
-  // NATIVE
   await db.runAsync(
-    `INSERT INTO categories (id, name, type) VALUES (?,?,?);`,
+    `INSERT INTO categories (id, name, type)
+     VALUES (?,?,?)`,
     [id, name, type]
   );
 }
@@ -115,44 +156,44 @@ export async function addCategory(id: string, name: string, type: "expense" | "i
 export async function deleteCategory(id: string) {
   const db = await getDb();
 
-  // WEB
-  if (db.deleteCategory) {
-    return db.deleteCategory(id);
-  }
-
-  // NATIVE
-  await db.runAsync(`DELETE FROM categories WHERE id=?;`, [id]);
-}
-// --- BUDGET QUERIES ---
-
-export async function listBudgets(month: string) {
-  const db = await getDb();
-
-  if (db.listBudgets) {
-    // Web
-    return db.listBudgets(month);
-  }
-
-  // Native SQL
-  return db.getAllAsync(
-    `SELECT * FROM budgets WHERE month=? ORDER BY category_id ASC;`,
-    [month]
+  await db.runAsync(
+    `DELETE FROM categories WHERE id=?`,
+    [id]
   );
 }
 
-export async function setBudget(month: string, category_id: string, limit_amount: number) {
+// -------------------------------------------
+// BUDGETS
+// -------------------------------------------
+export async function listBudgets(
+  month: string
+): Promise<BudgetRow[]> {
   const db = await getDb();
 
-  if (db.setBudget) {
-    // Web
-    return db.setBudget(month, category_id, limit_amount);
-  }
+  return (await db.getAllAsync(
+    `SELECT * FROM budgets WHERE month=? ORDER BY category_id ASC`,
+    [month]
+  )) as BudgetRow[];
+}
 
-  // Native SQL (upsert)
+// Tek bir kategori bütçesini getir (Bütçe kontrolü için)
+export async function getBudget(month: string, categoryId: string): Promise<BudgetRow | undefined> {
+  const budgets = await listBudgets(month);
+  return budgets.find(b => b.category_id === categoryId);
+}
+
+export async function setBudget(
+  month: string,
+  category_id: string,
+  limit_amount: number
+) {
+  const db = await getDb();
+
   await db.runAsync(
     `INSERT INTO budgets (month, category_id, limit_amount)
      VALUES (?,?,?)
-     ON CONFLICT(month, category_id) DO UPDATE SET limit_amount=excluded.limit_amount;`,
+     ON CONFLICT(month, category_id)
+     DO UPDATE SET limit_amount = excluded.limit_amount;`,
     [month, category_id, limit_amount]
   );
 }
@@ -164,7 +205,7 @@ export async function monthSpentByCategory(
   month: string,
   category_id: string
 ) {
-  const rows = await listTransactions(month);
+  const rows: TransactionRow[] = await listTransactions(month);
 
   let total = 0;
 
@@ -175,4 +216,106 @@ export async function monthSpentByCategory(
   }
 
   return total;
+}
+
+export async function expensesByCategory(month: string) {
+  const db = await getDb();
+  
+  const rows = (await db.getAllAsync(
+    `SELECT c.name, SUM(ABS(t.amount)) as total
+     FROM transactions t
+     LEFT JOIN categories c ON t.category_id = c.id
+     WHERE strftime('%Y-%m', t.tx_date) = ? AND t.amount < 0
+     GROUP BY c.name
+     ORDER BY total DESC;`,
+    [month]
+  )) as { name: string | null; total: number }[];
+
+  return rows.map((r) => ({
+    x: r.name ?? "Diğer",
+    y: r.total,
+    label: r.name ?? "Diğer" 
+  }));
+}
+// src/db/queries.ts dosyasının EN ALTINA ekle:
+
+import dayjs from "dayjs"; // dayjs importunun en tepede olduğundan emin ol
+
+// -------------------------------------------
+// RECURRING TRANSACTIONS
+// -------------------------------------------
+export type RecurringRow = {
+  id: string;
+  amount: number;
+  category_id?: string | null;
+  account_id: string;
+  note?: string | null;
+  frequency: string;
+  next_due_date: string;
+  category_name?: string | null;
+};
+
+export async function listRecurring(): Promise<RecurringRow[]> {
+  const db = await getDb();
+  return (await db.getAllAsync(`
+    SELECT r.*, c.name as category_name
+    FROM recurring_transactions r
+    LEFT JOIN categories c ON r.category_id = c.id
+    ORDER BY r.next_due_date ASC;
+  `)) as RecurringRow[];
+}
+
+export async function addRecurring(input: Omit<RecurringRow, 'category_name'>) {
+  const db = await getDb();
+  await db.runAsync(
+    `INSERT INTO recurring_transactions (id, amount, category_id, account_id, note, frequency, next_due_date)
+     VALUES (?, ?, ?, ?, ?, ?, ?);`,
+    [input.id, input.amount, input.category_id ?? null, input.account_id, input.note ?? null, input.frequency, input.next_due_date]
+  );
+}
+
+export async function deleteRecurring(id: string) {
+  const db = await getDb();
+  await db.runAsync(`DELETE FROM recurring_transactions WHERE id = ?`, [id]);
+}
+
+// Uygulama açılışında çalışacak fonksiyon
+export async function processRecurringTransactions() {
+  const db = await getDb();
+  const today = dayjs().format("YYYY-MM-DD");
+
+  // 1. Günü gelmiş veya geçmiş işlemleri bul
+  const dues = (await db.getAllAsync(
+    `SELECT * FROM recurring_transactions WHERE next_due_date <= ?`,
+    [today]
+  )) as RecurringRow[];
+
+  for (const item of dues) {
+    // 2. Ana tabloya (transactions) ekle
+    const newTxId = "tx-auto-" + Math.random().toString(36).slice(2, 10);
+    await addTransaction({
+      id: newTxId,
+      account_id: item.account_id,
+      category_id: item.category_id,
+      amount: item.amount,
+      note: item.note ? `(Otomatik) ${item.note}` : "(Otomatik Ödeme)",
+      tx_date: item.next_due_date, // Orijinal vade tarihinde işle
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    // 3. Bir sonraki vade tarihini hesapla (1 ay sonrası)
+    // Not: Basitlik için sadece aylık ekliyoruz. Haftalık vs. için burası genişletilebilir.
+    const nextDate = dayjs(item.next_due_date).add(1, 'month').format("YYYY-MM-DD");
+
+    // 4. Recurring tablosunu güncelle
+    await db.runAsync(
+      `UPDATE recurring_transactions SET next_due_date = ? WHERE id = ?`,
+      [nextDate, item.id]
+    );
+  }
+  
+  if (dues.length > 0) {
+    console.log(`${dues.length} adet tekrarlayan işlem işlendi.`);
+  }
 }
