@@ -80,6 +80,7 @@ export async function addTransaction(input: TransactionRow) {
 
   await db.runAsync(
     `INSERT INTO transactions
+    `INSERT INTO transactions
       (id, account_id, category_id, amount, note, tx_date, created_at, updated_at)
      VALUES (?,?,?,?,?,?,?,?);`,
     [
@@ -127,7 +128,26 @@ export async function monthSummary(month: string): Promise<MonthSummary> {
 export async function monthExpenseTotal(month: string) {
   const s = await monthSummary(month);
   return s.expense;
+    if (amount > 0) income += amount;
+    else if (amount < 0) expense += Math.abs(amount);
+  }
+
+  return {
+    income,
+    expense,
+    net: income - expense,
+  };
 }
+
+export async function monthExpenseTotal(month: string) {
+  const s = await monthSummary(month);
+  return s.expense;
+}
+
+// -------------------------------------------
+// CATEGORIES
+// -------------------------------------------
+export async function listCategories(): Promise<CategoryRow[]> {
 
 // -------------------------------------------
 // CATEGORIES
@@ -135,7 +155,9 @@ export async function monthExpenseTotal(month: string) {
 export async function listCategories(): Promise<CategoryRow[]> {
   const db = await getDb();
   return (await db.getAllAsync(
+  return (await db.getAllAsync(
     `SELECT * FROM categories ORDER BY name ASC;`
+  )) as CategoryRow[];
   )) as CategoryRow[];
 }
 
@@ -144,9 +166,16 @@ export async function addCategory(
   name: string,
   type: string
 ) {
+export async function addCategory(
+  id: string,
+  name: string,
+  type: string
+) {
   const db = await getDb();
 
   await db.runAsync(
+    `INSERT INTO categories (id, name, type)
+     VALUES (?,?,?)`,
     `INSERT INTO categories (id, name, type)
      VALUES (?,?,?)`,
     [id, name, type]
@@ -160,7 +189,18 @@ export async function deleteCategory(id: string) {
     `DELETE FROM categories WHERE id=?`,
     [id]
   );
+  await db.runAsync(
+    `DELETE FROM categories WHERE id=?`,
+    [id]
+  );
 }
+
+// -------------------------------------------
+// BUDGETS
+// -------------------------------------------
+export async function listBudgets(
+  month: string
+): Promise<BudgetRow[]> {
 
 // -------------------------------------------
 // BUDGETS
@@ -170,6 +210,8 @@ export async function listBudgets(
 ): Promise<BudgetRow[]> {
   const db = await getDb();
 
+  return (await db.getAllAsync(
+    `SELECT * FROM budgets WHERE month=? ORDER BY category_id ASC`,
   return (await db.getAllAsync(
     `SELECT * FROM budgets WHERE month=? ORDER BY category_id ASC`,
     [month]
@@ -187,11 +229,18 @@ export async function setBudget(
   category_id: string,
   limit_amount: number
 ) {
+export async function setBudget(
+  month: string,
+  category_id: string,
+  limit_amount: number
+) {
   const db = await getDb();
 
   await db.runAsync(
     `INSERT INTO budgets (month, category_id, limit_amount)
      VALUES (?,?,?)
+     ON CONFLICT(month, category_id)
+     DO UPDATE SET limit_amount = excluded.limit_amount;`,
      ON CONFLICT(month, category_id)
      DO UPDATE SET limit_amount = excluded.limit_amount;`,
     [month, category_id, limit_amount]

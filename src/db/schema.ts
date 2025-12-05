@@ -19,7 +19,9 @@ CREATE TABLE IF NOT EXISTS transactions (
   account_id TEXT NOT NULL,
   category_id TEXT,
   amount INTEGER NOT NULL,
+  amount INTEGER NOT NULL,
   note TEXT,
+  tx_date TEXT NOT NULL,
   tx_date TEXT NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
@@ -29,6 +31,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 
 CREATE TABLE IF NOT EXISTS budgets (
   id TEXT PRIMARY KEY,
+  month TEXT NOT NULL,                  -- YYYY-MM
   month TEXT NOT NULL,                  -- YYYY-MM
   category_id TEXT NOT NULL,
   limit_amount INTEGER NOT NULL,
